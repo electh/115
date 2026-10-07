@@ -1197,6 +1197,7 @@ func (w *Worker) enabled() bool {
 type ThumbWorker struct {
 	OnStatusChanged func(bool)
 	Gen             ThumbnailGenerator
+	Covers          CoverProvider
 	Catalog         *catalog.Catalog
 	Drive           drives.Drive
 	TaskGuard       func() func()
@@ -1989,6 +1990,9 @@ func (w *ThumbWorker) process(ctx context.Context, v *catalog.Video) bool {
 		return false
 	}
 	_ = w.Catalog.UpdateVideoMeta(ctx, v.ID, catalog.VideoMetaPatch{ThumbnailStatus: "pending"})
+	if w.tryNetworkCover(ctx, v) || ctx.Err() != nil {
+		return false
+	}
 	link, optimized, err := w.streamLink(ctx, v)
 	if err != nil {
 		if w.pauseForRecoverableError(ctx, v, err, "streamURL") {

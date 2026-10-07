@@ -36,6 +36,7 @@ type Config struct {
 	Logging      Logging      `yaml:"logging"`
 	Scanner      Scanner      `yaml:"scanner"`
 	Preview      Preview      `yaml:"preview"`
+	MetaTube     MetaTube     `yaml:"metatube"`
 	Generation   Generation   `yaml:"generation"`
 	Proxy        Proxy        `yaml:"proxy"`
 	Nightly      Nightly      `yaml:"nightly"`
@@ -282,6 +283,9 @@ func Parse(data []byte) (*Config, error) {
 		return nil, err
 	}
 	if err := c.Telegram.Validate(); err != nil {
+		return nil, err
+	}
+	if err := c.MetaTube.Validate(); err != nil {
 		return nil, err
 	}
 	return &c, nil

@@ -1201,6 +1201,10 @@ func (a *App) newDriveGenerationWorkers(drv drives.Drive) (*preview.Worker, *pre
 	previewWorker := preview.NewWorker(gen, a.cat, drv)
 	previewWorker.Enabled = a.previewEnabled
 	thumbWorker := preview.NewThumbWorker(gen, a.cat, drv)
+	if a.cfg != nil && a.cfg.MetaTube.URL != "" {
+		thumbWorker.Covers = preview.NewMetaTubeCover(a.cfg.MetaTube.URL, a.cfg.MetaTube.Token,
+			time.Duration(a.cfg.MetaTube.TimeoutSeconds)*time.Second, a.cfg.Storage.LocalPreviewDir)
+	}
 	thumbnailLimiter, previewLimiter, fingerprintLimiter := a.generationLimits()
 	previewWorker.Limiter = previewLimiter
 	thumbWorker.Limiter = thumbnailLimiter
