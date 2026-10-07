@@ -14,10 +14,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/video-site/backend/internal/applog"
 	"github.com/video-site/backend/internal/catalog"
@@ -53,85 +51,19 @@ func NewMetaTubeCover(baseURL, token string, timeout time.Duration, localDir str
 type coverMatch struct {
 	ID       string `json:"id"`
 	Provider string `json:"provider"`
-	Number   string `json:"number"`
-	Title    string `json:"title"`
 }
 
 var errCoverNotFound = errors.New("MetaTube cover not found")
 
-var (
-	fc2Number   = regexp.MustCompile(`(?i)(?:^|[^a-z0-9])FC2[-_ ]*(?:PPV[-_ ]*)?([0-9]{5,8})(?:$|[^a-z0-9])`)
-	videoNumber = regexp.MustCompile(`(?i)(?:^|[^a-z0-9])([a-z]{2,10})[-_ ]*([0-9]{3,6})(?:$|[^a-z0-9]|c(?:$|[^a-z0-9]))`)
-	videoNoise  = regexp.MustCompile(`(?i)\b(?:2160p|1080p|720p|480p|4k|uhd|bluray|bdrip|webrip|web[- ]?dl|h264|h265|x264|x265|hevc|aac|chs|cht)\b`)
-)
-
-func coverNumber(value string) string {
-	if m := fc2Number.FindStringSubmatch(value); len(m) > 0 {
-		return "FC2-PPV-" + m[1]
-	}
-	if m := videoNumber.FindStringSubmatch(value); len(m) > 0 {
-		return strings.ToUpper(m[1]) + "-" + m[2]
-	}
-	return ""
-}
-
-func coverTitle(value string) string {
-	value = filepath.Base(strings.ReplaceAll(value, `\`, "/"))
-	// Strip only video extensions; dots in titles are meaningful separators.
-	switch strings.ToLower(filepath.Ext(value)) {
-	case ".mp4", ".mkv", ".mov", ".webm", ".avi", ".strm", ".m4v", ".ts":
-		value = strings.TrimSuffix(value, filepath.Ext(value))
-	}
-	value = strings.NewReplacer(".", " ", "_", " ").Replace(value)
-	return strings.Join(strings.Fields(videoNoise.ReplaceAllString(value, " ")), " ")
-}
-
-func normalizedCoverTitle(value string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			return unicode.ToLower(r)
-		}
-		return -1
-	}, coverTitle(value))
-}
-
+// Send names unchanged: MetaTube owns filename cleanup and number extraction.
 func coverQueries(video *catalog.Video) []string {
-	values := []string{video.FileName, video.Title}
-	// An explicit identifier outranks a possibly edited display title.
-	for _, value := range values {
-		if number := coverNumber(value); number != "" {
-			return []string{number}
-		}
+	if strings.TrimSpace(video.FileName) != "" {
+		return []string{video.FileName}
 	}
-	var queries []string
-	for _, value := range values {
-		query := coverTitle(value)
-		if len([]rune(normalizedCoverTitle(query))) < 3 {
-			continue
-		}
-		if len(queries) == 0 || query != queries[0] {
-			queries = append(queries, query)
-		}
+	if strings.TrimSpace(video.Title) != "" {
+		return []string{video.Title}
 	}
-	return queries
-}
-
-func matchesCover(query string, match coverMatch) bool {
-	if match.ID == "" || match.Provider == "" {
-		return false
-	}
-	if number := coverNumber(query); number != "" {
-		return normalizedCoverNumber(number) == normalizedCoverNumber(coverNumber(match.Number))
-	}
-	return normalizedCoverTitle(query) == normalizedCoverTitle(match.Title)
-}
-
-func normalizedCoverNumber(number string) string {
-	index := strings.LastIndexByte(number, '-')
-	if index < 0 {
-		return number
-	}
-	return number[:index+1] + strings.TrimLeft(number[index+1:], "0")
+	return nil
 }
 
 func (m *MetaTubeCover) get(ctx context.Context, path string, query url.Values, limit int64) ([]byte, error) {
@@ -192,24 +124,20 @@ func (m *MetaTubeCover) FetchCover(ctx context.Context, video *catalog.Video) (s
 		if len(response.Error) > 0 && string(response.Error) != "null" {
 			return "", errors.New("MetaTube search error")
 		}
-		attempts := 0
-		for _, match := range response.Data {
-			if !matchesCover(query, match) {
-				continue
+		if len(response.Data) > 0 {
+			match := response.Data[0]
+			if match.ID == "" || match.Provider == "" {
+				return "", errors.New("invalid MetaTube first result")
 			}
-			attempts++
 			// MetaTube's image proxy applies provider headers and returns JPEG,
 			// avoiding hotlink failures and sending credentials to third parties.
 			path := "/v1/images/backdrop/" + url.PathEscape(match.Provider) + "/" + url.PathEscape(match.ID)
 			data, err := m.get(ctx, path, nil, 12<<20)
-			if err == nil {
-				if local, err := m.saveCover(ctx, video.ID, data); err == nil {
-					return local, nil
-				}
+			if err != nil {
+				return "", err
 			}
-			if attempts >= 3 || ctx.Err() != nil {
-				break
-			}
+			// Use only the first result; image failures fall back to extraction.
+			return m.saveCover(ctx, video.ID, data)
 		}
 		if ctx.Err() != nil {
 			return "", ctx.Err()

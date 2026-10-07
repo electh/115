@@ -17,29 +17,27 @@ import (
 	"github.com/video-site/backend/internal/mediaasset"
 )
 
-func TestCoverQueriesAndMatching(t *testing.T) {
+func TestCoverQueries(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		want []string
+		name  string
+		video catalog.Video
+		want  []string
 	}{
-		{"[source] abc_00123_C_1080p.mp4", []string{"ABC-00123"}},
-		{"FC2_PPV_1234567.mp4", []string{"FC2-PPV-1234567"}},
-		{"Example.Movie.1080p.x265.mkv", []string{"Example Movie"}},
-		{"x.mp4", nil},
+		{"source prefix", catalog.Video{FileName: "hhd800.com@STARS-847", Title: "edited title"}, []string{"hhd800.com@STARS-847"}},
+		{"release tags", catalog.Video{FileName: "[source] abc_00123_C_1080p.mp4"}, []string{"[source] abc_00123_C_1080p.mp4"}},
+		{"title punctuation", catalog.Video{FileName: "Example.Movie.1080p.x265.mkv"}, []string{"Example.Movie.1080p.x265.mkv"}},
+		{"URL encoding", catalog.Video{FileName: "来源@STARS-847 & extras+#.mp4"}, []string{"来源@STARS-847 & extras+#.mp4"}},
+		{"short name", catalog.Video{FileName: "x.mp4"}, []string{"x.mp4"}},
+		{"missing filename", catalog.Video{Title: "STARS-847 edited title"}, []string{"STARS-847 edited title"}},
+		{"blank filename", catalog.Video{FileName: "  ", Title: "fallback title"}, []string{"fallback title"}},
+		{"empty names", catalog.Video{}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := coverQueries(&catalog.Video{FileName: tc.name})
+			got := coverQueries(&tc.video)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("queries=%v want=%v", got, tc.want)
 			}
 		})
-	}
-	match := coverMatch{ID: "id", Provider: "provider", Number: "ABC-123", Title: "Example Movie"}
-	if !matchesCover("ABC-00123", match) || !matchesCover("Example.Movie.mp4", match) {
-		t.Fatal("exact matches rejected")
-	}
-	if matchesCover("ABC-124", match) || matchesCover("Example", match) {
-		t.Fatal("unrelated result accepted")
 	}
 }
 
@@ -48,7 +46,7 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 	if err := jpeg.Encode(&jpegData, image.NewRGBA(image.Rect(0, 0, 16, 9)), nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"success", "no-match", "wrong-number", "invalid-image", "http-error", "not-found", "malformed", "timeout", "canceled"} {
+	for _, mode := range []string{"success", "source-prefix", "filename-encoding", "no-match", "wrong-number", "multiple-results", "invalid-first-result", "invalid-image", "http-error", "not-found", "malformed", "timeout", "canceled"} {
 		t.Run(mode, func(t *testing.T) {
 			imageRequests := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +54,14 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 					t.Error("missing authentication")
 				}
 				if r.URL.Path == "/prefix/v1/movies/search" {
-					if r.URL.Query().Get("q") != "ABC-123" {
+					wantQuery := "ABC-123.mp4"
+					if mode == "source-prefix" {
+						wantQuery = "hhd800.com@STARS-847"
+					}
+					if mode == "filename-encoding" {
+						wantQuery = "来源@STARS-847 & extras+#.mp4"
+					}
+					if r.URL.Query().Get("q") != wantQuery {
 						t.Error("incorrect filename query")
 					}
 					switch mode {
@@ -73,12 +78,18 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 						<-r.Context().Done()
 						return
 					}
-					matches := []coverMatch{{ID: "movie", Provider: "provider", Number: "ABC-123"}}
+					matches := []map[string]string{{"id": "movie", "provider": "provider", "number": "ABC-123"}}
 					if mode == "no-match" {
 						matches = nil
 					}
 					if mode == "wrong-number" {
-						matches[0].Number = "ABC-124"
+						matches[0]["number"] = "ABC-124"
+					}
+					if mode == "multiple-results" || mode == "invalid-image" || mode == "invalid-first-result" {
+						matches = append(matches, map[string]string{"id": "second", "provider": "provider", "number": "ABC-123"})
+					}
+					if mode == "invalid-first-result" {
+						delete(matches[0], "id")
 					}
 					_ = json.NewEncoder(w).Encode(map[string]any{"data": matches})
 					return
@@ -96,6 +107,12 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 			defer server.Close()
 			cat, video := seedPreviewTestVideo(t, "network-cover-"+mode)
 			video.FileName = "ABC-123.mp4"
+			if mode == "source-prefix" {
+				video.FileName = "hhd800.com@STARS-847"
+			}
+			if mode == "filename-encoding" {
+				video.FileName = "来源@STARS-847 & extras+#.mp4"
+			}
 			if err := cat.UpsertVideo(context.Background(), video); err != nil {
 				t.Fatal(err)
 			}
@@ -128,7 +145,7 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 			if got.ThumbnailURL != "/p/thumb/"+video.ID || got.PreviewStatus != "pending" {
 				t.Fatalf("unexpected metadata: %+v", got)
 			}
-			if mode == "success" {
+			if mode == "success" || mode == "source-prefix" || mode == "filename-encoding" || mode == "wrong-number" || mode == "multiple-results" {
 				if gen.thumbnailVideoID != "" || gen.probeCalls != 0 || drive.streamFileID != "" {
 					t.Fatal("network success accessed video stream")
 				}
@@ -147,8 +164,8 @@ func TestNetworkCoverWorkerSuccessAndFallback(t *testing.T) {
 				if gen.thumbnailVideoID != video.ID || got.DurationSeconds != 42 {
 					t.Fatal("original frame extraction did not run")
 				}
-				if mode == "wrong-number" && imageRequests != 0 {
-					t.Fatal("downloaded mismatched cover")
+				if mode == "invalid-first-result" && imageRequests != 0 {
+					t.Fatal("downloaded a later result after invalid first result")
 				}
 				if _, err := os.Stat(mediaasset.ThumbnailPath(dir, video.ID)); !os.IsNotExist(err) {
 					t.Fatal("failed cover left an asset")
