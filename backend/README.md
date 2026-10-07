@@ -4,12 +4,12 @@
 
 ```bash
 cd backend
-go run ./cmd/server        # 首次启动自动从 config.example.yaml 生成 config.yaml，监听 127.0.0.1:9192
+go run ./cmd/server        # 使用 config.yaml；默认监听 0.0.0.0:9191
 go test ./...              # 单元测试；缺 ffmpeg / python3 时相关测试自动跳过
 go build -o server ./cmd/server
 ```
 
-前端开发在仓库根目录 `npm run dev`，vite 会把 `/api`、`/p`、`/admin/api`、`/peer` 代理到 9192。所有配置项及注释见 [config.example.yaml](config.example.yaml)，正文只在涉及行为时提及个别配置。
+前端开发需要 Node.js 22.12+（推荐 24）。在仓库根目录运行 `npm ci`，再运行 `FRONTEND_MODE=dev ./start.sh`，会使用独立的 `backend/config.dev.yaml` 和默认的 `backend/data-dev/`；前端监听 9191，后端监听 `127.0.0.1:9192`，Vite 将 `/api`、`/p`、`/admin/api`、`/peer` 代理到该后端。`BACKEND_PORT` 可同时调整开发后端端口和代理目标。直接 `go run ./cmd/server` 使用生产配置，默认端口为 9191，不会自动切换到开发配置。所有配置项及注释见 [config.example.yaml](config.example.yaml)。
 
 每次启动时，服务会先迁移旧版数据库配置，再按随程序打包的 `config.example.yaml` 重建实际配置：保留模板中同名字段的已有值（包括 `false`、`0`、空字符串和空列表），缺失字段使用模板默认值，字段顺序和注释统一采用模板，模板外的字段及自定义注释会被清理。更新完成后原子替换原文件并保留文件权限；配置没有变化时不会重复写入。升级无需手动复制模板，Docker 和原生部署使用同一流程。
 
@@ -18,7 +18,7 @@ go build -o server ./cmd/server
 仓库根目录是前端（Vite + React），`backend/` 是本文档描述的 Go 服务：
 
 ```
-91/
+115/
   src/                      前端源码：admin/ 管理后台、pages/、components/、lib/、styles/
   tests/                    前端测试（node --test）
   index.html  public/       前端入口与静态资源
@@ -386,8 +386,9 @@ flowchart LR
 
 ### 8. 日志与排查
 
-- 一键脚本部署（systemd）：前端静态资源、API 与媒体路由由同一个
-  `video-site-backend` 服务提供，日志用 `journalctl -u video-site-backend`；
-  `start.sh` 模式日志在 `$LOG_DIR`（默认 `/tmp/video-site-91/`）。
+- 一键 `install.sh` 部署（systemd）：前端静态资源、API 与媒体路由由同一个
+  `video-site-91` 服务提供，日志用 `sudo 91 logs` 或 `journalctl -u video-site-91`；
+  源码 `deploy.sh` 部署的默认服务名为 `video-site-backend`，使用 `journalctl -u video-site-backend`。
+  Docker 使用 `docker compose logs -f`；`start.sh` 开发日志位于 `$LOG_DIR`（默认 `/tmp/video-site-91-dev/`）。
 - 后端日志按模块带前缀，直接 grep：`[scanner]`、`[scriptcrawler]`、`[nightly]`、`[dedupe-maintenance]` 等。爬虫 Python 子进程的输出并入后端日志。
 - 常见排查入口：网盘异常看后台网盘页的健康状态与 `lastError`；预览/封面卡住多半是上游限流，等冷却期过或看 `[nightly]` 是否在等队列排空；去重删了什么搜 `duplicate deleted`，内容匹配过程搜 `content duplicate matched`。

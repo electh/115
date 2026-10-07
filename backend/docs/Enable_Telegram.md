@@ -66,7 +66,7 @@ sudo 91 restart
 **1. 进入存放 `91` 项目 `docker-compose.yml` 的目录，然后下载完整部署模板**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nianzhibai/91/main/tg-docker-compose.yml -o tg-docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/electh/115/main/tg-docker-compose.yml -o tg-docker-compose.yml
 ```
 
 **2. 将原来的 `docker-compose.yml` 替换成 `tg-docker-compose.yml`**

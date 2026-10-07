@@ -55,7 +55,7 @@ ARG VERSION=dev
 
 ENV VIDEO_CONFIG=/opt/video-site-91/data/config.yaml \
     VIDEO_FRONTEND_DIR=/opt/video-site-91/dist \
-    VIDEO_GITHUB_REPO=nianzhibai/91 \
+    VIDEO_GITHUB_REPO=electh/115 \
     VIDEO_IMAGE_VERSION=${VERSION} \
     VIDEO_LISTEN_PORT=9191 \
     VIDEO_VERSION_FILE=/opt/video-site-91/data/.version

@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 APP_NAME="${APP_NAME:-video-site-91}"
-GITHUB_REPO="${GITHUB_REPO:-nianzhibai/91}"
+GITHUB_REPO="${GITHUB_REPO:-electh/115}"
 INSTALL_PATH="${INSTALL_PATH:-/opt/video-site-91}"
 SERVICE_NAME="${SERVICE_NAME:-video-site-91}"
 FRONTEND_PORT_WAS_SET="${FRONTEND_PORT+x}"

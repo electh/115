@@ -1,10 +1,11 @@
 services:
   video-site-91:
-    image: ghcr.io/nianzhibai/91:stable
+    image: ghcr.io/electh/115:stable
     container_name: video-site-91
     ports:
       - "9191:9191"
     environment:
+      VIDEO_GITHUB_REPO: electh/115
       VIDEO_RESTART_MANAGED: "true"
       VIDEO_TELEGRAM_COMPOSE: /opt/video-site-91/telegram.yml
     volumes:

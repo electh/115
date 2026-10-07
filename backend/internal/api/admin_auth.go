@@ -234,7 +234,7 @@ func (a *AdminServer) latestRelease(ctx context.Context) (githubReleaseDTO, erro
 	if url == "" {
 		repo := strings.TrimSpace(a.GitHubRepo)
 		if repo == "" {
-			repo = "nianzhibai/91"
+			repo = "electh/115"
 		}
 		url = "https://api.github.com/repos/" + repo + "/releases/latest"
 	}
