@@ -1,16 +1,4 @@
-type Props = {
-  state: "loading" | "end";
-};
-
-export function InfiniteFeedStatus({ state }: Props) {
-  if (state === "end") {
-    return (
-      <div className="listing-infinite-status listing-infinite-status--end">
-        没有更多了
-      </div>
-    );
-  }
-
+export function InfiniteFeedStatus() {
   return (
     <div className="listing-infinite-status" role="status" aria-live="polite">
       <span

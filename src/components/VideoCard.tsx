@@ -29,7 +29,6 @@ export const VideoCard = memo(function VideoCard({
   highPriority = false,
 }: Props) {
   const [titlePressed, setTitlePressed] = useState(false);
-  const author = video.author?.trim() || "未知";
   const badges = video.badges ?? [];
   const hasOriginalBadge = badges.some((badge) => badge === "91" || badge === "原创");
   const location = useLocation();
@@ -172,15 +171,8 @@ export const VideoCard = memo(function VideoCard({
           <span className="video-meta__date" title={video.publishedAt}>
             添加时间: {video.publishedAt}
           </span>
-          <span className="video-meta__author" title={author}>
-            作者: {author}
-          </span>
           <div className="video-meta__row">
             <span className="video-meta__views">热度: {video.views}</span>
-            <span>收藏: {video.favorites ?? 0}</span>
-          </div>
-          <div className="video-meta__row">
-            <span>留言: {video.comments ?? 0}</span>
             <span className="video-meta__reaction" aria-label={`赞 ${video.likes ?? 0}`}>
               <ThumbsUp size={11} fill="currentColor" strokeWidth={1} aria-hidden="true" />
               {video.likes ?? 0}

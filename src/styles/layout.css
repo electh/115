@@ -178,7 +178,7 @@
   }
 }
 
-/* 无限滚动列表尾部的加载中 / 到底提示 */
+/* 无限滚动列表尾部的加载提示 */
 .listing-infinite-status {
   display: flex;
   align-items: center;
@@ -188,12 +188,6 @@
   padding: var(--space-4) 0;
   color: var(--text-muted);
   font-size: var(--font-sm);
-}
-
-.listing-infinite-status--end {
-  min-height: 0;
-  padding-block: var(--space-2);
-  color: var(--text-faint);
 }
 
 /* =========================================================
@@ -375,8 +369,8 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-/* 列表结束提示和内容区已提供底部留白，页脚无需再叠加上边距。 */
-.app-shell__main:has(.listing-infinite-status--end) + .footer {
+/* 首页和列表内容区已提供底部留白，页脚无需再叠加上边距。 */
+.app-shell__main:has(.home-primary-section, .listing-primary-section) + .footer {
   margin-top: 0;
 }
 

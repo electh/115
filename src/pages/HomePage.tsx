@@ -211,17 +211,15 @@ export default function HomePage() {
               prefetchRows={PREFETCH_ROWS}
               tailContent={
                 homeFeed.loadingMore ? (
-                  <InfiniteFeedStatus state="loading" />
+                  <InfiniteFeedStatus />
                 ) : undefined
               }
               onLoadMore={homeFeed.loadMore}
             />
 
-            {homeFeed.failed ? (
+            {homeFeed.failed && (
               <ListingLoadError hasContent onRetry={homeFeed.retry} />
-            ) : homeFeed.exhausted ? (
-              <InfiniteFeedStatus state="end" />
-            ) : null}
+            )}
           </>
         )}
       </div>

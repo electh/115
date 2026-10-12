@@ -37,13 +37,26 @@ func TestFrontendHandlerServesStaticAsset(t *testing.T) {
 	}
 }
 
-func TestFrontendHandlerServesIndexWithRevalidation(t *testing.T) {
+func TestFrontendHandlerServesUnversionedAssetsWithRevalidation(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>app</html>"), 0o644); err != nil {
-		t.Fatalf("write index: %v", err)
+	files := map[string]string{
+		"index.html":           "<html>app</html>",
+		"manifest.webmanifest": `{"display":"standalone"}`,
+		"icon.png":             "icon content",
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
 	}
 
-	for _, target := range []string{"/", "/admin", "/index.html"} {
+	for target, content := range map[string]string{
+		"/":                     files["index.html"],
+		"/admin":                files["index.html"],
+		"/index.html":           files["index.html"],
+		"/manifest.webmanifest": files["manifest.webmanifest"],
+		"/icon.png":             files["icon.png"],
+	} {
 		req := httptest.NewRequest(http.MethodGet, target, nil)
 		rr := httptest.NewRecorder()
 		frontendHandler(dir).ServeHTTP(rr, req)
@@ -51,11 +64,22 @@ func TestFrontendHandlerServesIndexWithRevalidation(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("%s status = %d, want 200", target, rr.Code)
 		}
-		if rr.Body.String() != "<html>app</html>" {
-			t.Fatalf("%s body = %q, want index", target, rr.Body.String())
+		if rr.Body.String() != content {
+			t.Fatalf("%s body = %q, want %q", target, rr.Body.String(), content)
 		}
-		if got := rr.Header().Get("Cache-Control"); got != frontendIndexCacheControl {
-			t.Fatalf("%s Cache-Control = %q, want %q", target, got, frontendIndexCacheControl)
+		if got := rr.Header().Get("Cache-Control"); got != frontendUnversionedAssetCacheControl {
+			t.Fatalf("%s Cache-Control = %q, want %q", target, got, frontendUnversionedAssetCacheControl)
+		}
+
+		conditionalReq := httptest.NewRequest(http.MethodGet, target, nil)
+		conditionalReq.Header.Set("If-Modified-Since", rr.Header().Get("Last-Modified"))
+		conditionalRR := httptest.NewRecorder()
+		frontendHandler(dir).ServeHTTP(conditionalRR, conditionalReq)
+		if conditionalRR.Code != http.StatusNotModified {
+			t.Fatalf("%s conditional status = %d, want 304", target, conditionalRR.Code)
+		}
+		if got := conditionalRR.Header().Get("Cache-Control"); got != frontendUnversionedAssetCacheControl {
+			t.Fatalf("%s conditional Cache-Control = %q, want %q", target, got, frontendUnversionedAssetCacheControl)
 		}
 	}
 }

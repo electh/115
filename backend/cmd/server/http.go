@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	frontendHashedAssetCacheControl = "public, max-age=31536000, immutable"
-	frontendIndexCacheControl       = "no-cache"
+	frontendHashedAssetCacheControl      = "public, max-age=31536000, immutable"
+	frontendUnversionedAssetCacheControl = "no-cache"
 )
 
 const (
@@ -492,8 +492,10 @@ func frontendHandler(dir string) http.HandlerFunc {
 					if strings.HasPrefix(cleanPath, "/assets/") {
 						w.Header().Set("Cache-Control", frontendHashedAssetCacheControl)
 						addHeaderToken(w.Header(), "Vary", "Accept-Encoding")
-					} else if cleanPath == "/index.html" {
-						w.Header().Set("Cache-Control", frontendIndexCacheControl)
+					} else {
+						// Stable URLs such as the PWA manifest must revalidate so
+						// existing installations receive changes after an upgrade.
+						w.Header().Set("Cache-Control", frontendUnversionedAssetCacheControl)
 					}
 					if encoding != "" {
 						w.Header().Set("Content-Encoding", encoding)
@@ -514,7 +516,7 @@ func frontendHandler(dir string) http.HandlerFunc {
 		// index.html names hashed assets that are removed on the next build. It
 		// may be stored locally, but every navigation must revalidate it so an
 		// old document never points at files that no longer exist.
-		w.Header().Set("Cache-Control", frontendIndexCacheControl)
+		w.Header().Set("Cache-Control", frontendUnversionedAssetCacheControl)
 		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 	}
 }

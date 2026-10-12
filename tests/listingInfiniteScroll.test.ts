@@ -76,19 +76,19 @@ test("scrolling near the end of the rendered window loads the next batch", () =>
   assert.match(listingPageSource, /const PREFETCH_ROWS = 2;/);
 });
 
-test("the listing page shows loading, end and tail-error states for infinite scroll", () => {
-  assert.match(listingPageSource, /\{showTailError \? \(/);
+test("the listing page shows loading and tail errors without an end notice", () => {
+  assert.match(listingPageSource, /\{showTailError && \(/);
   assert.match(
     listingPageSource,
     /<ListingLoadError hasContent onRetry=\{listing\.retry\} \/>/
   );
-  assert.match(listingPageSource, /<InfiniteFeedStatus state="loading" \/>/);
-  assert.match(listingPageSource, /listing\.exhausted \? \(\s*<InfiniteFeedStatus state="end" \/>/);
+  assert.match(listingPageSource, /<InfiniteFeedStatus \/>/);
+  assert.doesNotMatch(listingPageSource, /state="end"/);
   assert.match(
     infiniteFeedStatusSource,
     /className="listing-infinite-status"[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?正在加载更多/
   );
-  assert.match(infiniteFeedStatusSource, /listing-infinite-status--end[\s\S]*?没有更多了/);
+  assert.doesNotMatch(infiniteFeedStatusSource, /listing-infinite-status--end|没有更多了/);
 
   const status = ruleBody(layoutCss, ".listing-infinite-status");
   assert.match(status, /display\s*:\s*flex/);

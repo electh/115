@@ -418,7 +418,7 @@
 .video-meta {
   display: grid;
   align-content: start;
-  min-height: 80px;
+  min-height: 40px;
   font-size: var(--font-md);
   line-height: 20px;
   color: var(--video-card-meta);
@@ -431,7 +431,6 @@
   white-space: nowrap;
 }
 
-.video-meta__author,
 .video-meta__date {
   overflow: hidden;
   text-overflow: ellipsis;

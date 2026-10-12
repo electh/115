@@ -44,8 +44,6 @@ export function VideoGrid({
               <span className="skeleton-card__title" />
               <span className="skeleton-card__meta" />
               <span className="skeleton-card__meta" />
-              <span className="skeleton-card__meta" />
-              <span className="skeleton-card__meta" />
             </div>
           </div>
         ))}

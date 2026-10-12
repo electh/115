@@ -158,16 +158,14 @@ export default function ListingPage() {
               loadingMore={loadingMore}
               prefetchRows={PREFETCH_ROWS}
               tailContent={
-                loadingMore ? <InfiniteFeedStatus state="loading" /> : undefined
+                loadingMore ? <InfiniteFeedStatus /> : undefined
               }
               onLoadMore={listing.loadMore}
             />
 
-            {showTailError ? (
+            {showTailError && (
               <ListingLoadError hasContent onRetry={listing.retry} />
-            ) : listing.exhausted ? (
-              <InfiniteFeedStatus state="end" />
-            ) : null}
+            )}
           </>
         )}
       </div>

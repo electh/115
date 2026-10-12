@@ -88,10 +88,10 @@ test("each home tab scrolls infinitely through its own feed source", () => {
     /<VirtualVideoGrid[\s\S]*?videos=\{feedItems\}[\s\S]*?hasMore=\{homeFeed\.hasMore\}[\s\S]*?loadingMore=\{homeFeed\.loadingMore\}[\s\S]*?prefetchRows=\{PREFETCH_ROWS\}[\s\S]*?onLoadMore=\{homeFeed\.loadMore\}/
   );
   assert.doesNotMatch(homePageSource, /setRange|onRangeChange|shouldLoadMore/);
-  assert.match(homePageSource, /<InfiniteFeedStatus state="loading" \/>/);
-  assert.match(homePageSource, /<InfiniteFeedStatus state="end" \/>/);
+  assert.match(homePageSource, /<InfiniteFeedStatus \/>/);
+  assert.doesNotMatch(homePageSource, /state="end"/);
   assert.match(infiniteFeedStatusSource, /正在加载更多/);
-  assert.match(infiniteFeedStatusSource, /没有更多了/);
+  assert.doesNotMatch(infiniteFeedStatusSource, /没有更多了/);
 });
 
 test("search, tag, and combined results use the same infinite listing", () => {
