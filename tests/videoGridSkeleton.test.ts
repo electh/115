@@ -30,7 +30,7 @@ test("video skeleton mirrors thumbnail, title, and metadata structure", () => {
   const thumb = ruleBody(videoCardCss, ".skeleton-card__thumb");
 
   assert.match(skeleton, /--skeleton-shimmer-base\s*:/);
-  assert.match(thumb, /height\s*:\s*135px/);
+  assert.match(thumb, /aspect-ratio\s*:\s*16\s*\/\s*9/);
   assert.match(
     videoCardCss,
     /\.skeleton-card__title\s*\{\s*margin-top:[^}]*width:\s*100%;[^}]*height:\s*1lh;[^}]*border-radius:\s*var\(--radius-xs\)/s

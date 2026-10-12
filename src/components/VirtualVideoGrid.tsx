@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
   type Ref,
+  type RefObject,
 } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -37,8 +38,6 @@ import { VideoCard } from "./VideoCard";
 
 const DEFAULT_OVERSCAN_ROWS = 2;
 const ESTIMATED_ROW_HEIGHT = 280;
-const MOBILE_GRID_QUERY = "(max-width: 767px)";
-const TABLET_GRID_QUERY = "(max-width: 991px)";
 const TAIL_ROW_HEIGHT = 56;
 const TAIL_ROW_KEY = "video-grid-tail";
 
@@ -57,31 +56,46 @@ type Props = {
   snapshotRef?: Ref<VirtualGridHandle>;
 };
 
-function readResponsiveGridColumns(): number {
-  if (typeof window === "undefined") return 4;
+function readResponsiveGridColumns(container: HTMLDivElement): number {
+  const styles = window.getComputedStyle(container);
   return virtualGridColumns({
-    mobile: window.matchMedia(MOBILE_GRID_QUERY).matches,
-    tablet: window.matchMedia(TABLET_GRID_QUERY).matches,
+    width: container.getBoundingClientRect().width,
+    cardWidth: parseFloat(styles.getPropertyValue("--video-grid-card-width")),
+    gap: parseFloat(styles.getPropertyValue("--video-grid-column-gap")),
   });
 }
 
-function useResponsiveGridColumns(active: boolean): number {
-  const [columns, setColumns] = useState(readResponsiveGridColumns);
+function useResponsiveGridColumns(
+  active: boolean,
+  containerRef: RefObject<HTMLDivElement>,
+  initialSnapshot?: VirtualGridSnapshot
+): number {
+  const [columns, setColumns] = useState(() =>
+    typeof window !== "undefined" && initialSnapshot?.viewportWidth === window.innerWidth
+      ? initialSnapshot.columns
+      : 4
+  );
 
   useLayoutEffect(() => {
-    if (!active) return;
-    const mobile = window.matchMedia(MOBILE_GRID_QUERY);
-    const tablet = window.matchMedia(TABLET_GRID_QUERY);
-    const update = () => setColumns(readResponsiveGridColumns());
-    mobile.addEventListener("change", update);
-    tablet.addEventListener("change", update);
-    // Catch viewport changes that happened while the listing was inactive.
+    if (!active || !containerRef.current) return;
+    const container = containerRef.current;
+    const update = () => setColumns(readResponsiveGridColumns(container));
+    let frame = 0;
+    const observer = typeof ResizeObserver === "undefined"
+      ? null : new ResizeObserver(() => {
+          window.cancelAnimationFrame(frame);
+          frame = window.requestAnimationFrame(update);
+        });
+    observer?.observe(container);
+    window.addEventListener("resize", update);
+    // Measure before paint, including container changes while the route was inactive.
     update();
     return () => {
-      mobile.removeEventListener("change", update);
-      tablet.removeEventListener("change", update);
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
     };
-  }, [active]);
+  }, [active, containerRef]);
 
   return columns;
 }
@@ -103,7 +117,7 @@ export function VirtualVideoGrid({
   const routeActive = useRouteActivity();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerWidthRef = useRef(0);
-  const columns = useResponsiveGridColumns(routeActive);
+  const columns = useResponsiveGridColumns(routeActive, containerRef, initialSnapshot);
   const restoredSnapshot = matchingVirtualGridSnapshot(initialSnapshot, {
     viewportWidth: typeof window === "undefined" ? 0 : window.innerWidth,
     columns,
@@ -204,7 +218,7 @@ export function VirtualVideoGrid({
     };
   }, [routeActive, updateScrollMargin]);
 
-  // 只有断点改变列数时才清空旧行测量；追加批次保留旧缓存。
+  // 只有容器宽度改变列数时才清空旧行测量；追加批次保留旧缓存。
   const previousColumnsRef = useRef(columns);
   useLayoutEffect(() => {
     if (previousColumnsRef.current === columns) return;

@@ -111,19 +111,14 @@ test("each row maps to its own slice of the list", () => {
   assert.deepEqual(virtualRowRange(0, 4, 0), { start: 0, end: 0 });
 });
 
-test("grid columns are known before the first browser paint", () => {
-  assert.equal(
-    virtualGridColumns({ mobile: false, tablet: false }),
-    4
-  );
-  assert.equal(
-    virtualGridColumns({ mobile: false, tablet: true }),
-    3
-  );
-  assert.equal(
-    virtualGridColumns({ mobile: true, tablet: true }),
-    1
-  );
+test("fixed-width columns wrap at container boundaries", () => {
+  const columns = (width: number) => virtualGridColumns({ width, cardWidth: 258, gap: 30 });
+  for (const [width, expected] of [[200, 1], [258, 1], [545, 1], [546, 2],
+    [833, 2], [834, 3], [1121, 3], [1122, 4], [1232, 4]]) {
+    assert.equal(columns(width), expected, `container width ${width}`);
+  }
+  assert.equal(columns(NaN), 1);
+  assert.equal(virtualGridColumns({ width: 800, cardWidth: 0, gap: 30 }), 1);
 });
 
 test("the load-more trigger comes from the render window and stops at the end", () => {

@@ -129,7 +129,7 @@ test("a retained listing disconnects its window virtualizer while inactive", () 
   );
   assert.match(
     virtualGridSource,
-    /function useResponsiveGridColumns\(active: boolean\)[\s\S]*?if \(!active\) return/
+    /function useResponsiveGridColumns\([\s\S]*?active: boolean,[\s\S]*?if \(!active \|\| !containerRef.current\) return/
   );
   assert.match(
     virtualGridSource,
@@ -164,12 +164,11 @@ test("the scrollbar grows with loaded content and keeps only a fixed tail row", 
 test("layout measurement stays off the per-frame scroll path", () => {
   assert.match(virtualGridSource, /ref=\{virtualizer\.measureElement\}/);
   assert.match(virtualGridSource, /data-index=\{virtualRow\.index\}/);
-  assert.match(virtualGridSource, /useState\(readResponsiveGridColumns\)/);
-  assert.match(virtualGridSource, /const columns = useResponsiveGridColumns\(routeActive\)/);
+  assert.match(virtualGridSource, /const columns = useResponsiveGridColumns\(routeActive, containerRef, initialSnapshot\)/);
   assert.match(virtualGridSource, /const nextMargin = rect\.top \+ window\.scrollY;/);
   assert.match(virtualGridSource, /new ResizeObserver\(\(\[entry\]\) =>/);
   assert.match(virtualGridSource, /observer\?\.disconnect\(\)/);
-  assert.doesNotMatch(virtualGridSource, /window\.getComputedStyle/);
+  assert.match(virtualGridSource, /readResponsiveGridColumns\(container\)/);
   const capture = virtualGridSource.match(/const capture = \(\) => \{([\s\S]*?)\n    \};/)?.[1];
   assert.ok(capture);
   assert.doesNotMatch(capture, /querySelector|getBoundingClientRect/);

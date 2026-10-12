@@ -1,25 +1,20 @@
 /* =========================================================
  * Video card / grid
  * ========================================================= */
-.video-grid {
+.video-grid,
+.video-grid-loading,
+.video-grid-region {
+  --video-grid-card-width: 258px;
   --video-grid-gap: var(--space-5);
   --video-grid-column-gap: 30px;
+}
+
+.video-grid,
+.video-grid-loading {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(0, var(--video-grid-card-width)));
+  justify-content: center;
   gap: var(--video-grid-gap) var(--video-grid-column-gap);
-}
-
-@media (max-width: 991px) {
-  .video-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .video-grid {
-    --video-grid-gap: var(--space-5);
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* ----- 虚拟滚动 ----- */
@@ -111,7 +106,7 @@
  * ========================================================= */
 .thumb-frame {
   position: relative;
-  height: 135px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #000;
   border-radius: 0;
@@ -158,11 +153,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.video-card .thumb-image,
-.video-card .preview-video {
-  object-fit: contain;
 }
 
 .thumb-image {
@@ -572,14 +562,6 @@
   gap: var(--space-3);
 }
 
-.video-grid-loading {
-  --video-grid-gap: var(--space-5);
-  --video-grid-column-gap: 30px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--video-grid-gap) var(--video-grid-column-gap);
-}
-
 .skeleton-card {
   --skeleton-card-bg: #fff;
   --skeleton-shimmer-base: rgba(0, 0, 0, 0.05);
@@ -621,7 +603,7 @@
 
 .skeleton-card__thumb {
   width: 100%;
-  height: 135px;
+  aspect-ratio: 16 / 9;
   flex-shrink: 0;
   border-radius: 0;
 }
@@ -643,19 +625,6 @@
 @keyframes skeleton-shimmer {
   from { background-position: 150% 0; }
   to { background-position: -150% 0; }
-}
-
-@media (max-width: 991px) {
-  .video-grid-loading {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .video-grid-loading {
-    --video-grid-gap: var(--space-5);
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* =========================================================

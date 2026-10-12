@@ -66,14 +66,19 @@ function toCount(value: number): number {
   return Math.floor(value);
 }
 
-/** 与视频网格 CSS 断点一致；首帧即可按正确列数折行。 */
+/** Count the fixed-width tracks that fit inside the actual grid container. */
 export function virtualGridColumns(input: {
-  mobile: boolean;
-  tablet: boolean;
+  width: number;
+  cardWidth: number;
+  gap: number;
 }): number {
-  if (input.mobile) return 1;
-  if (input.tablet) return 3;
-  return 4;
+  const { width, cardWidth, gap } = input;
+  if (
+    !Number.isFinite(width) || width <= 0 ||
+    !Number.isFinite(cardWidth) || cardWidth <= 0 ||
+    !Number.isFinite(gap) || gap < 0
+  ) return 1;
+  return Math.max(1, Math.floor((width + gap) / (cardWidth + gap)));
 }
 
 /** 虚拟单元是"整行"，行数决定 virtualizer 的 count。 */
